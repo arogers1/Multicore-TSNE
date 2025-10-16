@@ -77,6 +77,35 @@ Please refer to [sklearn TSNE manual](http://scikit-learn.org/stable/modules/gen
 
 This implementation `n_components=2`, which is the most common case (use [Barnes-Hut t-SNE](https://github.com/lvdmaaten/bhtsne) or sklearn otherwise). Also note that some parameters are there just for the sake of compatibility with sklearn and are otherwise ignored. See `MulticoreTSNE` class docstring for more info.
 
+### Running t-SNE on Spark clusters
+
+The repository now also ships a PySpark-based solver located in the `spark_tsne`
+package.  It keeps the high-level API compatible with `MulticoreTSNE` while
+expressing the heavy steps (distance computations and gradient updates) as
+Spark jobs.  This allows the algorithm to scale beyond a single machine and is
+particularly useful when the input matrix is already stored in a Spark
+pipeline.
+
+```python
+from pyspark.sql import SparkSession
+from spark_tsne import SparkTSNE
+
+spark = SparkSession.builder.appName("SparkTSNE").getOrCreate()
+
+solver = SparkTSNE(spark, n_iter=750, perplexity=40.0, random_state=13)
+embedding = solver.fit_transform(X)
+
+spark.stop()
+```
+
+The solver operates on dense `numpy` arrays, broadcasting them to the workers to
+distribute the computations.  When the [`com.nosto.spartann`](https://github.com/nosto/spartann)
+package is on the classpath you can enable `use_spartann=True` to plug in a
+custom nearest-neighbour computation strategy; the helper method can be
+monkey-patched to call the Scala APIs offered by SpartANN if desired.  For a
+complete runnable example see `spark_tsne/example.py`, which is designed to be
+invoked with `spark-submit`.
+
 #### MNIST example
 ```python
 from sklearn.datasets import fetch_openml
