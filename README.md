@@ -87,24 +87,33 @@ particularly useful when the input matrix is already stored in a Spark
 pipeline.
 
 ```python
+from pyspark.ml.linalg import Vectors
 from pyspark.sql import SparkSession
 from spark_tsne import SparkTSNE
 
 spark = SparkSession.builder.appName("SparkTSNE").getOrCreate()
 
+# Assuming `rows` is an iterable of feature arrays produced earlier in the pipeline
+features_df = spark.createDataFrame([(Vectors.dense(vec),) for vec in rows], ["features"])
+
 solver = SparkTSNE(spark, n_iter=750, perplexity=40.0, random_state=13)
-embedding = solver.fit_transform(X)
+embedding = solver.fit_transform(features_df)
 
 spark.stop()
 ```
 
-The solver operates on dense `numpy` arrays, broadcasting them to the workers to
-distribute the computations.  When the [`com.nosto.spartann`](https://github.com/nosto/spartann)
-package is on the classpath you can enable `use_spartann=True` to plug in a
-custom nearest-neighbour computation strategy; the helper method can be
-monkey-patched to call the Scala APIs offered by SpartANN if desired.  For a
-complete runnable example see `spark_tsne/example.py`, which is designed to be
-invoked with `spark-submit`.
+`SparkTSNE` accepts Spark DataFrames whose `features` column stores
+`pyspark.ml.linalg.Vector` values, allowing datasets to remain distributed
+throughout the optimisation.  Dense NumPy arrays and generic iterables are still
+supported for experimentation, but the Spark DataFrame path avoids collecting
+the entire dataset on the driver.
+
+When the [`com.nosto.spartann`](https://github.com/nosto/spartann) package is on
+the classpath you can enable `use_spartann=True` to plug in a custom
+nearest-neighbour computation strategy; the helper method can be monkey-patched
+to call the Scala APIs offered by SpartANN if desired.  For a complete runnable
+example see `spark_tsne/example.py`, which is designed to be invoked with
+`spark-submit`.
 
 #### MNIST example
 ```python

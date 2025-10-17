@@ -1,15 +1,16 @@
-"""Minimal usage example for :mod:`spark_tsne`.
+"""Synthetic dataset demo for :class:`spark_tsne.SparkTSNE`.
 
-The script demonstrates how to launch :class:`SparkTSNE` on a synthetic dataset.
-It can be executed with ``spark-submit`` and will print the resulting embedding
-coordinates to stdout.  The example deliberately keeps the dimensionality small
-so that it can run on a development machine.
+The script demonstrates how to launch :class:`SparkTSNE` on a synthetic dataset
+stored as a Spark DataFrame.  It can be executed with ``spark-submit`` and will
+print the resulting embedding coordinates to stdout.  The example deliberately
+keeps the dimensionality small so that it can run on a development machine.
 """
 from __future__ import annotations
 
 import argparse
 
 import numpy as np
+from pyspark.ml.linalg import Vectors
 from pyspark.sql import SparkSession
 
 from .pyspark_tsne import SparkTSNE
@@ -32,6 +33,7 @@ def main() -> None:
     base = rng.standard_normal(size=(args.samples // 2, args.features))
     offset = rng.standard_normal(size=(args.features,)) * 5.0
     data = np.vstack([base, base + offset])
+    df = spark.createDataFrame([(Vectors.dense(vec),) for vec in data], ["features"])
 
     solver = SparkTSNE(
         spark,
@@ -40,7 +42,7 @@ def main() -> None:
         random_state=args.seed,
         verbose=True,
     )
-    embedding = solver.fit_transform(data)
+    embedding = solver.fit_transform(df)
 
     print("Embedding shape:", embedding.shape)
     print(embedding)
