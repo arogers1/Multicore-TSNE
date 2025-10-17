@@ -109,6 +109,9 @@ if __name__ == '__main__':
                 'scikit-learn',
                 'scipy',
             ],
+            'spark': [
+                'pyspark>=3.0.0',
+            ],
         },
         test_suite='MulticoreTSNE.tests',
         tests_require=['MulticoreTSNE[test]']
